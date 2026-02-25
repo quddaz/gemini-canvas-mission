@@ -1,13 +1,28 @@
 # gemini-canvas-mission
 
+## 🎮 2. 게임
 
+### 앱 이름
+N-Back 연습 게임
+### 배포 링크
+https://gemini.google.com/share/e3c5e8378d72
 
-<br>
+### 이 앱을 만든 이유
+
+- 이 게임은 모 기업의 AI 역량 검사 게임을 모티브로 만들어졌습니다. 제가 취업 활동을 했을 때 이 게임이 정말 어려웠습니다. 그래서 연습을 위해 만들었습니다.
+- 이 게임은 제가 AI 역량 검사를 할 필요가 생긴다면 연습에 사용할 것 같습니다.
+
+### 주요 기능
+
+- 게임 시작 시 3개의 도형을 보여준다.
+- 게임이 진행되며 도형이 추가되고 해당 도형이 어느 위치인지 정답을 작성하면 되는 게임입니다. 
+
+<hr>
 
 ## 🤝 4. 페어 프롬프트 릴레이 앱
 ### 앱 이름: DeilyMeet
 ### 페어
-[@Jiihyun](https://github.com/Jiihyun) [@quddaz](https://github.com/quddaz)
+[@Jiihyun](https://github.com/Jiihyun)
 
 ### 배포 링크
 https://gemini.google.com/share/72c47aeab363
@@ -28,7 +43,7 @@ https://gemini.google.com/share/72c47aeab363
 - 매일 새로운 데일리 주제를 떠올리는 것은 생각보다 쉽지 않습니다. AI는 이러한 고민을 덜어주고 앱을 더욱 능동적으로 활용할 수 있게 돕는 핵심 역할을 합니다.
 - 먼저 오늘의 데일리 주제를 제안해 주며, 만약 제안된 주제가 마음에 들지 않을 경우 특정 키워드를 입력해 AI를 통해 우리 팀에 딱 맞는 새로운 질문과 활동을 추천받을 수 있습니다.
 
-<br>
+<hr>
 
 ## AI 사용 일지
 
