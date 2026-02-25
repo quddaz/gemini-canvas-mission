@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>클린코드 네이밍 추천기</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* 로딩 스피너 애니메이션 */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 p-4 md:p-8 font-sans selection:bg-blue-200">
+  <div class="max-w-3xl mx-auto space-y-8">
+    
+    <!-- Header -->
+    <header class="text-center space-y-3">
+      <div class="inline-flex items-center justify-center p-3 bg-blue-100 rounded-2xl mb-2">
+        <i data-lucide="sparkles" class="w-8 h-8 text-blue-600"></i>
+      </div>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">
+        클린코드 네이밍 추천기
+      </h1>
+      <p class="text-slate-600 max-w-xl mx-auto text-lg">
+        의도를 명확히 드러내고 가독성을 높이는 완벽한 이름을 찾아보세요.
+      </p>
+    </header>
+
+    <!-- Main Card -->
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-8">
+      
+      <!-- Step 1: Element Type -->
+      <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-sm font-bold text-slate-600">1</span>
+          어떤 요소를 만드시나요?
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="type-container">
+          <!-- 버튼들이 JS로 렌더링됩니다 -->
+        </div>
+      </section>
+
+      <!-- Step 2: Description -->
+      <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-sm font-bold text-slate-600">2</span>
+          역할을 설명해주세요
+        </h2>
+        <textarea
+          id="description"
+          placeholder="예: 장바구니에 담긴 상품들의 총 결제 금액을 계산하고 할인율을 적용하여 최종 금액을 반환합니다."
+          class="w-full h-32 p-4 rounded-2xl border border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all placeholder:text-slate-400"
+        ></textarea>
+      </section>
+
+      <!-- Error Message -->
+      <div id="error-container" class="hidden flex items-center gap-2 text-red-600 bg-red-50 p-4 rounded-xl text-sm">
+        <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0"></i>
+        <p id="error-text"></p>
+      </div>
+
+      <!-- Action Button -->
+      <button
+        id="submit-btn"
+        class="w-full py-4 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+      >
+        <span id="btn-icon" class="flex items-center"><i data-lucide="sparkles" class="w-6 h-6"></i></span>
+        <span id="btn-text">클린코드 이름 추천받기</span>
+      </button>
+    </div>
+
+    <!-- Results Section -->
+    <div id="results-section" class="hidden space-y-4 transition-all duration-500">
+      <h3 class="text-xl font-bold text-slate-800 px-2">추천 결과</h3>
+      <div id="results-list" class="grid gap-4">
+        <!-- 결과가 JS로 렌더링됩니다 -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 초기 아이콘 렌더링
+    lucide.createIcons();
+
+    // 상태 관리
+    let currentType = 'class';
+    let isLoading = false;
+    let results = [];
+
+    const elementTypes = [
+      { id: 'class', label: '클래스 (Class)', icon: 'box', desc: '명사, 명사구 (예: Customer, Account)' },
+      { id: 'object', label: '객체/변수 (Object)', icon: 'code', desc: '의미 있는 문맥, 검색 가능한 이름' },
+      { id: 'method', label: '메소드/함수 (Method)', icon: 'terminal-square', desc: '동사, 동사구 (예: save, deletePage)' },
+    ];
+
+    // DOM 요소
+    const typeContainer = document.getElementById('type-container');
+    const descriptionInput = document.getElementById('description');
+    const submitBtn = document.getElementById('submit-btn');
+    const btnText = document.getElementById('btn-text');
+    const btnIcon = document.getElementById('btn-icon');
+    const errorContainer = document.getElementById('error-container');
+    const errorText = document.getElementById('error-text');
+    const resultsSection = document.getElementById('results-section');
+    const resultsList = document.getElementById('results-list');
+
+    // 타입 버튼 렌더링 함수
+    function renderTypeButtons() {
+      typeContainer.innerHTML = '';
+      elementTypes.forEach(type => {
+        const isSelected = currentType === type.id;
+        const button = document.createElement('button');
+        
+        // 동적 클래스 적용
+        const baseClasses = 'relative p-4 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col gap-2 w-full';
+        const activeClasses = isSelected 
+          ? 'border-blue-500 bg-blue-50/50 ring-4 ring-blue-500/10' 
+          : 'border-slate-200 hover:border-blue-200 hover:bg-slate-50';
+        
+        button.className = `${baseClasses} ${activeClasses}`;
+        button.onclick = () => {
+          currentType = type.id;
+          renderTypeButtons(); // 재렌더링
+        };
+
+        const iconColor = isSelected ? 'text-blue-600' : 'text-slate-400';
+        const titleColor = isSelected ? 'text-blue-900' : 'text-slate-700';
+
+        button.innerHTML = `
+          <i data-lucide="${type.icon}" class="w-6 h-6 ${iconColor}"></i>
+          <div>
+            <div class="font-semibold ${titleColor}">${type.label}</div>
+            <div class="text-xs text-slate-500 mt-1">${type.desc}</div>
+          </div>
+        `;
+        typeContainer.appendChild(button);
+      });
+      lucide.createIcons(); // 새 아이콘 렌더링
+    }
+
+    // 초기 버튼 렌더링
+    renderTypeButtons();
+
+    // 복사 기능
+    window.handleCopy = function(text, btnElement) {
+      const originalHtml = `
+        <i data-lucide="copy" class="w-4 h-4 text-slate-400 group-hover:text-blue-600"></i>
+        <span>복사</span>
+      `;
+      const successHtml = `
+        <i data-lucide="check" class="w-4 h-4 text-green-600"></i>
+        <span class="text-green-600">복사됨</span>
+      `;
+
+      const executeCopy = () => {
+        btnElement.innerHTML = successHtml;
+        lucide.createIcons();
+        setTimeout(() => {
+          btnElement.innerHTML = originalHtml;
+          lucide.createIcons();
+        }, 2000);
+      };
+
+      try {
+        navigator.clipboard.writeText(text).then(executeCopy);
+      } catch (err) {
+        // Fallback
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        executeCopy();
+      }
+    };
+
+    // 결과 렌더링 함수
+    function renderResults() {
+      if (results.length === 0) {
+        resultsSection.classList.add('hidden');
+        return;
+      }
+
+      resultsSection.classList.remove('hidden');
+      resultsList.innerHTML = '';
+
+      results.forEach((result, index) => {
+        const item = document.createElement('div');
+        item.className = 'bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-blue-300 transition-colors';
+        
+        item.innerHTML = `
+          <div class="space-y-1.5 flex-1">
+            <div class="font-mono text-xl font-bold text-slate-900 bg-slate-100 inline-block px-3 py-1 rounded-lg">
+              ${result.name}
+            </div>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              ${result.reason}
+            </p>
+          </div>
+          <button
+            onclick="handleCopy('${result.name}', this)"
+            class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-colors sm:w-auto w-full flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <i data-lucide="copy" class="w-4 h-4 text-slate-400 group-hover:text-blue-600"></i>
+            <span>복사</span>
+          </button>
+        `;
+        resultsList.appendChild(item);
+      });
+      lucide.createIcons();
+    }
+
+    // 에러 표시 함수
+    function showError(msg) {
+      if (msg) {
+        errorText.textContent = msg;
+        errorContainer.classList.remove('hidden');
+      } else {
+        errorContainer.classList.add('hidden');
+      }
+    }
+
+    // 로딩 상태 변경 함수
+    function setLoading(loading) {
+      isLoading = loading;
+      submitBtn.disabled = loading;
+      
+      if (loading) {
+        btnIcon.innerHTML = `<i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i>`;
+        btnText.textContent = '이름 생성 중...';
+      } else {
+        btnIcon.innerHTML = `<i data-lucide="sparkles" class="w-6 h-6"></i>`;
+        btnText.textContent = '클린코드 이름 추천받기';
+      }
+      lucide.createIcons();
+    }
+
+    // API 호출
+    async function fetchRecommendations(retryCount = 0) {
+      const description = descriptionInput.value.trim();
+      
+      if (!description) {
+        showError('설명을 입력해주세요.');
+        return;
+      }
+
+      setLoading(true);
+      showError(null);
+      results = [];
+      renderResults();
+
+      const apiKey = ""; // Environment will inject the API key
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      const typeLabel = elementTypes.find(t => t.id === currentType).label;
+      const promptText = `요소 타입: ${typeLabel}\n설명: ${description}\n클린코드 원칙(의도를 분명히 밝히기, 발음하기 쉬운 이름 사용, 검색하기 쉬운 이름 사용, 클래스는 명사, 메소드는 동사 등)에 맞는 프로그래밍 식별자(이름)를 영어로 3~5개 추천해주세요. 카멜 케이스(camelCase)나 파스칼 케이스(PascalCase) 중 타입에 맞는 관례를 따르세요.`;
+
+      const payload = {
+        contents: [{ parts: [{ text: promptText }] }],
+        systemInstruction: { 
+          parts: [{ text: "당신은 클린코드(Clean Code) 원칙을 철저히 지키는 시니어 개발자입니다. 사용자의 설명을 듣고 가장 적합한 변수/클래스/메소드 명을 추천해야 합니다. 추천하는 이유도 한국어로 간략히 설명해주세요." }] 
+        },
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              suggestions: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    name: { type: "STRING" },
+                    reason: { type: "STRING" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      };
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (textResponse) {
+          const parsedData = JSON.parse(textResponse);
+          results = parsedData.suggestions || [];
+          renderResults();
+        } else {
+          throw new Error("응답 포맷이 올바르지 않습니다.");
+        }
+      } catch (err) {
+        if (retryCount < 5) {
+          const delay = Math.pow(2, retryCount) * 1000;
+          setTimeout(() => fetchRecommendations(retryCount + 1), delay);
+          return; // 재시도 중에는 로딩 상태를 유지
+        } else {
+          showError('이름을 생성하는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // 이벤트 리스너 등록
+    submitBtn.addEventListener('click', () => fetchRecommendations(0));
+  </script>
+</body>
+</html>
