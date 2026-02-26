@@ -111,7 +111,7 @@
                     <div class="flex gap-2 mb-4">
                         <input type="text" id="ai-keyword-input" placeholder="예: 휴가, 최근 트렌드, 음식, 팀워크..." 
                                class="flex-1 p-3 rounded-xl border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                               onkeydown="if(event.key === 'Enter') handleFetchAi()">
+                               onkeydown="if(event.key === 'Enter' && !event.isComposing) handleFetchAi()">
                         <button id="btn-ai-fetch" onclick="handleFetchAi()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 rounded-xl font-semibold transition-colors disabled:opacity-50 flex items-center justify-center min-w-[140px]">
                             AI 추천 받기
                         </button>
@@ -183,7 +183,7 @@
                 
                 <div class="p-6">
                     <div class="flex mb-6">
-                        <input type="text" id="new-member-input" class="flex-1 p-3 border border-gray-200 rounded-l-xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="새 팀원 이름 입력" onkeydown="if(event.key === 'Enter') addMember()">
+                        <input type="text" id="new-member-input" class="flex-1 p-3 border border-gray-200 rounded-l-xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="새 팀원 이름 입력" onkeydown="if(event.key === 'Enter' && !event.isComposing) addMember()">
                         <button onclick="addMember()" class="bg-indigo-600 text-white px-6 rounded-r-xl font-semibold hover:bg-indigo-700 flex items-center">
                             <i class="ph-bold ph-plus mr-1"></i> 추가
                         </button>

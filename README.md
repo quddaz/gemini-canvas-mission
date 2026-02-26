@@ -92,7 +92,7 @@ https://gemini.google.com/share/12f18ea83f8d
 [@Jiihyun](https://github.com/Jiihyun)
 
 ### 배포 링크
-https://gemini.google.com/share/72c47aeab363
+https://gemini.google.com/share/d41399cd6882
 
 ### 이 앱을 만든 이유
 - 우테코에서 '데일리(Daily)' 미팅 문화를 처음 접한 후, "팀원들과 어떻게 하면 데일리 일정을 더 원활하고 유쾌하게 소통할 수 있을까?"라는 고민에서 출발했습니다.
