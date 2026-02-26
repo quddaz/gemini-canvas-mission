@@ -39,6 +39,24 @@
 
         <!-- Home View: Category Selection & File Upload -->
         <section id="view-home" class="animate-fade-in space-y-8">
+            <!-- Difficulty Selection Section -->
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                    <i data-lucide="bar-chart" class="w-5 h-5 text-blue-500"></i> 면접 난이도 선택
+                </h3>
+                <div class="flex flex-wrap gap-3 mb-4" id="difficulty-selector">
+                    <!-- Difficulties injected via JS -->
+                </div>
+                <!-- 꼬리 질문 토글 추가 -->
+                <div class="flex items-center gap-3 pt-4 border-t border-slate-100">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="follow-up-toggle" class="sr-only peer" onchange="toggleFollowUp(event)">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <span class="ml-3 text-sm font-bold text-slate-700 flex items-center gap-1"><i data-lucide="git-merge" class="w-4 h-4 text-slate-500"></i> 꼬리 질문 (심층 면접) 활성화</span>
+                    </label>
+                </div>
+            </div>
+
             <div>
                 <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
                     <i data-lucide="sparkles" class="w-5 h-5 text-blue-500"></i> AI 추천 질문 카테고리
@@ -96,7 +114,7 @@
                             <span id="question-tag" class="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full uppercase tracking-wider">AI Question</span>
                             <div id="q-loading-spinner" class="hidden"><i data-lucide="refresh-cw" class="w-4 h-4 text-blue-400 animate-spin"></i></div>
                         </div>
-                        <h2 id="display-question" class="text-2xl font-bold leading-relaxed break-keep min-h-[3rem]"></h2>
+                        <h2 id="display-question" class="text-lg md:text-xl font-medium text-slate-800 leading-relaxed break-keep whitespace-pre-wrap min-h-[3rem]"></h2>
                     </div>
                     
                     <textarea id="answer-input" placeholder="핵심 위주로 답변해보세요..." class="w-full h-48 p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none mb-6"></textarea>
@@ -171,15 +189,30 @@
             { id: 'Network', name: 'Network', icon: 'network', color: 'bg-rose-100 text-rose-600' },
         ];
 
+        const difficulties = [
+            { id: 'level1', name: '🌱 신입', prompt: '신입(Junior) 개발자 수준. 해당 기술의 핵심 개념과 동작 원리를 묻는 기초적인 질문 하나만 생성하세요. 너무 복잡하지 않게 핵심만 물어보세요.' },
+            { id: 'level2', name: '🏃 실무자 (1~3년)', prompt: '1~3년차 주니어 개발자 수준. 실제 프로젝트에서 겪을 수 있는 트러블슈팅, 성능 이슈 대응, 프레임워크의 내부 동작 원리 등 실무적인 질문 하나를 생성하세요.' },
+            { id: 'level3', name: '🔥 시니어 (5년+)', prompt: '5년차 이상 시니어 개발자 수준. 대규모 트래픽 처리, 아키텍처 설계, 동시성 이슈 해결, DB 락(Lock) 및 트랜잭션 최적화 등 깊이 있는 질문 하나를 생성하세요.' }
+        ];
+
         let state = {
             selectedCategory: null,
+            selectedDifficulty: null,
             currentQuestion: "",
             isProcessing: false,
             // Custom Relay State
             isRelayMode: false,
             relayQuestions: [],
-            relayIndex: 0
+            relayIndex: 0,
+            // Follow-up State
+            isFollowUpMode: false,
+            followUpDepth: 0,
+            nextFollowUpQuestion: ""
         };
+
+        function toggleFollowUp(e) {
+            state.isFollowUpMode = e.target.checked;
+        }
 
         async function fetchAI(prompt, systemInstruction, responseMimeType = "text/plain") {
             let retries = 0;
@@ -236,15 +269,19 @@
                     Analyze the provided text and extract/generate 5 meaningful technical interview questions in Korean.
                     Focus on the core concepts found in the text.
                     Return the result ONLY as a JSON array of strings.
+                    CRITICAL: Do NOT use any Markdown formatting (like **, *, \`) in the strings. Return pure plain text.
                     Example: ["질문1", "질문2", "질문3", "질문4", "질문5"]`;
 
                     const rawResponse = await fetchAI(text, systemPrompt, "application/json");
                     const cleaned = rawResponse.replace(/```json/g, "").replace(/```/g, "").trim();
-                    const questions = JSON.parse(cleaned);
+                    let questions = JSON.parse(cleaned);
 
                     if (!Array.isArray(questions) || questions.length === 0) {
                         throw new Error("질문을 추출할 수 없습니다.");
                     }
+
+                    // 마크다운 잔재 제거 (강조용 별표 제거)
+                    questions = questions.map(q => q.replace(/\*\*([^*]+)\*\*/g, '$1'));
 
                     startRelay(questions);
                 } catch (err) {
@@ -306,7 +343,18 @@
         }
 
         function nextAction() {
-            if (state.isRelayMode) {
+            if (state.isFollowUpMode && state.nextFollowUpQuestion) {
+                state.followUpDepth++;
+                state.currentQuestion = state.nextFollowUpQuestion;
+                state.nextFollowUpQuestion = ""; // 질문 소진
+                
+                showView('interview');
+                document.getElementById('question-tag').innerText = `AI 꼬리 질문 (${state.followUpDepth}차)`;
+                document.getElementById('display-question').innerText = state.currentQuestion;
+                document.getElementById('answer-input').value = "";
+                document.getElementById('btn-regen').classList.add('hidden'); // 꼬리 질문은 다른 질문 받기 숨김
+                window.scrollTo(0, 0);
+            } else if (state.isRelayMode) {
                 state.relayIndex++;
                 if (state.relayIndex >= state.relayQuestions.length) {
                     goHome();
@@ -325,25 +373,33 @@
             if (state.isProcessing) return;
             state.isProcessing = true;
             state.isRelayMode = false;
+            state.followUpDepth = 0;
+            state.nextFollowUpQuestion = "";
             state.selectedCategory = category;
             
             showView('interview');
             updateInterviewHeader(category);
             document.getElementById('relay-counter').classList.add('hidden');
-            document.getElementById('question-tag').innerText = "AI Question";
+            document.getElementById('question-tag').innerText = `AI Question (${state.selectedDifficulty.name})`;
             document.getElementById('display-question').innerText = "";
             document.getElementById('q-loading-spinner').classList.remove('hidden');
             document.getElementById('answer-input').value = "";
             document.getElementById('btn-regen').classList.remove('hidden');
             document.getElementById('btn-next-text').innerText = "다음 질문 도전";
 
-            const system = `You are a professional and encouraging technical interviewer. 
-            Generate ONE simple, fundamental interview question in Korean for: ${category.name}. 
-            Focus on concepts that show general understanding. Output only question text.`;
+            const system = `You are a professional and strict technical interviewer. 
+            Generate ONE interview question in Korean for the category: ${category.name}.
+            Difficulty target: ${state.selectedDifficulty.prompt}
+            
+            CRITICAL RULES:
+            1. Output ONLY the question text.
+            2. Do NOT use any Markdown formatting (like **, *, #, \`). Return pure plain text only.
+            3. For long scenario-based questions (like Senior level), MUST use line breaks (\\n) appropriately to separate the situation/context from the actual question to ensure high readability.`;
             
             try {
                 const question = await fetchAI(`Question for ${category.name}`, system);
-                state.currentQuestion = question.trim();
+                // 마크다운 잔재 제거
+                state.currentQuestion = question.trim().replace(/\*\*([^*]+)\*\*/g, '$1');
                 document.getElementById('display-question').innerText = state.currentQuestion;
             } catch (err) {
                 showError("질문 생성 실패");
@@ -362,18 +418,36 @@
             setLoadingState(true);
             hideError();
 
-            const system = `You are a supportive, practical technical interviewer. 
-            Analyze the Korean answer to: "${state.currentQuestion}". 
+            let formatExample = '{"score": 85, "strengths": "...", "weaknesses": "...", "idealAnswer": "..."}';
+            let followUpPrompt = "";
+            if (state.isFollowUpMode) {
+                followUpPrompt = "3. Generate a 'nextQuestion' that asks a logical, deeper follow-up question based specifically on what the user answered, to test their depth of knowledge. Do NOT use markdown in this question.";
+                formatExample = '{"score": 85, "strengths": "...", "weaknesses": "...", "idealAnswer": "...", "nextQuestion": "..."}';
+            }
+
+            const system = `You are a supportive but precise technical interviewer. 
+            Analyze the Korean answer to: "${state.currentQuestion}".
+            The target difficulty level of this question is: ${state.selectedDifficulty.name}.
             
             CRITICAL RULES:
-            1. Be generous with scoring. If the user explains the "core concept" correctly in simple terms, give a high score (80+). 
+            1. Evaluate strictly based on the difficulty level. Higher levels require deeper technical details, architectural thinking, and edge case handling. Lower levels just need core concept understanding.
             2. Provide: score (number 0-100), strengths (string), weaknesses (string), idealAnswer (string).
-            Respond ONLY in JSON.`;
+            ${followUpPrompt}
+            Respond ONLY in JSON format. Do NOT use any Markdown formatting (like **, *, \`) in the JSON string values.
+            Example: ${formatExample}`;
 
             try {
                 const rawResult = await fetchAI(`Answer: ${answer}`, system, "application/json");
                 const cleaned = rawResult.replace(/```json/g, "").replace(/```/g, "").trim();
                 const feedback = JSON.parse(cleaned);
+                
+                // 피드백 텍스트 및 꼬리 질문 마크다운 제거
+                const stripMd = (str) => typeof str === 'string' ? str.replace(/\*\*([^*]+)\*\*/g, '$1') : str;
+                feedback.strengths = stripMd(feedback.strengths);
+                feedback.weaknesses = stripMd(feedback.weaknesses);
+                feedback.idealAnswer = stripMd(feedback.idealAnswer);
+                if (feedback.nextQuestion) feedback.nextQuestion = stripMd(feedback.nextQuestion);
+
                 displayResult(feedback);
             } catch (err) {
                 showError("채점 오류 발생");
@@ -384,6 +458,26 @@
         }
 
         // --- UI Helpers ---
+
+        function initDifficulties() {
+            const container = document.getElementById('difficulty-selector');
+            container.innerHTML = "";
+            difficulties.forEach(diff => {
+                const btn = document.createElement('button');
+                const isSelected = state.selectedDifficulty.id === diff.id;
+                btn.className = `px-5 py-3 rounded-xl font-bold transition-all border text-sm sm:text-base ${
+                    isSelected 
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-600 ring-offset-2' 
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-blue-400 hover:bg-blue-50'
+                }`;
+                btn.innerText = diff.name;
+                btn.onclick = () => {
+                    state.selectedDifficulty = diff;
+                    initDifficulties();
+                };
+                container.appendChild(btn);
+            });
+        }
 
         function initCategories() {
             const grid = document.getElementById('category-grid');
@@ -448,7 +542,10 @@
             else comment.innerText = '"조금만 더 핵심을 정리해보면 좋겠어요."';
 
             const nextBtnText = document.getElementById('btn-next-text');
-            if (state.isRelayMode) {
+            if (state.isFollowUpMode && feedback.nextQuestion) {
+                state.nextFollowUpQuestion = feedback.nextQuestion;
+                nextBtnText.innerText = "꼬리 질문 답하기";
+            } else if (state.isRelayMode) {
                 nextBtnText.innerText = (state.relayIndex + 1 >= state.relayQuestions.length) ? "인터뷰 종료" : "다음 분석 질문";
             } else {
                 nextBtnText.innerText = "다음 질문 도전";
@@ -456,6 +553,7 @@
 
             showView('result');
             lucide.createIcons();
+            window.scrollTo(0, 0);
         }
 
         function showError(msg) {
@@ -472,8 +570,11 @@
             state.selectedCategory = null;
             state.currentQuestion = "";
             state.isRelayMode = false;
+            state.followUpDepth = 0;
+            state.nextFollowUpQuestion = "";
             document.getElementById('file-input').value = "";
             setAnalyzingUI(false);
+            window.scrollTo(0, 0);
         }
 
         function regenerateQuestion() {
@@ -482,7 +583,11 @@
             }
         }
 
-        window.onload = initCategories;
+        window.onload = () => {
+            state.selectedDifficulty = difficulties[0]; // 기본 난이도: 신입
+            initDifficulties();
+            initCategories();
+        };
     </script>
 </body>
 </html>
