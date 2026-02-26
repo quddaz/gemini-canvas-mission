@@ -113,7 +113,7 @@ https://gemini.google.com/share/d41399cd6882
 <hr>
 
 
-## AI 사용 일지
+## AI 사용 일지(AI 기술 면접 트레이너)
 
 ### 1. 초기 프롬프트
 ``` 
