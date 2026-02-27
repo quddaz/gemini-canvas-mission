@@ -61,7 +61,7 @@ https://gemini.google.com/share/e3c5e8378d72
 ### 앱 이름
 AI 기술 면접 트레이너
 ### 배포 링크
-https://gemini.google.com/share/12f18ea83f8d
+https://gemini.google.com/share/3fc40a3ebdb7
 ### 이 앱을 만든 이유
 - **어떤 문제/불편함을 해결하려고 했나요?**
   - 면접을 연습하기 위해서는 2가지 조건이 필요합니다. 1. 같이할 사람이 있거나, 2. AI에게 수동으로 면접리스트를 뽑고 하나하나 프롬프트로 조율하거나 입니다. 저는 이러한 상황이 매우 귀찮았습니다.

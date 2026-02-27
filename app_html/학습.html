@@ -18,12 +18,17 @@
 
     <div class="max-w-4xl mx-auto p-4 md:p-8">
         <!-- Header -->
-        <header class="mb-8 text-center">
+        <header class="mb-8 text-center relative">
             <h1 class="text-3xl font-bold text-slate-800 flex items-center justify-center gap-2">
                 <i data-lucide="book-open" class="text-blue-600"></i>
                 AI 기술 면접 트레이너
             </h1>
-            <p class="text-slate-500 mt-2">AI 질문 또는 내 문서 분석으로 면접을 대비하세요.</p>
+            <p class="text-slate-500 mt-2 mb-4">AI 질문 또는 내 문서 분석으로 면접을 대비하세요.</p>
+            
+            <button onclick="showSavedQuestions()" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-full text-sm font-semibold hover:bg-slate-700 transition-colors shadow-sm">
+                <i data-lucide="bookmark" class="w-4 h-4"></i>
+                저장된 질문 (<span id="saved-count">0</span>)
+            </button>
         </header>
 
         <!-- Error Toast -->
@@ -115,9 +120,29 @@
                             <div id="q-loading-spinner" class="hidden"><i data-lucide="refresh-cw" class="w-4 h-4 text-blue-400 animate-spin"></i></div>
                         </div>
                         <h2 id="display-question" class="text-lg md:text-xl font-medium text-slate-800 leading-relaxed break-keep whitespace-pre-wrap min-h-[3rem]"></h2>
+                        
+                        <!-- 힌트 영역 -->
+                        <div class="mt-4 min-h-[2rem]">
+                            <button id="btn-toggle-hint" onclick="toggleHint()" class="text-sm text-amber-600 font-semibold flex items-center gap-1 hover:text-amber-800 transition-colors hidden">
+                                <i data-lucide="lightbulb" class="w-4 h-4"></i>
+                                <span id="hint-btn-text">힌트 키워드 보기</span>
+                            </button>
+                            <div id="hint-container" class="hidden mt-3 flex flex-wrap gap-2">
+                            </div>
+                        </div>
                     </div>
                     
-                    <textarea id="answer-input" placeholder="핵심 위주로 답변해보세요..." class="w-full h-48 p-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none mb-6"></textarea>
+                    <div class="relative mb-6">
+                        <textarea id="answer-input" placeholder="핵심 위주로 답변해보세요..." class="w-full h-48 p-5 pb-16 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"></textarea>
+                        
+                        <!-- 마이크 버튼 -->
+                        <div class="absolute bottom-4 right-4 flex items-center gap-2">
+                            <span id="mic-status" class="text-xs font-bold text-red-500 animate-pulse hidden">듣는 중...</span>
+                            <button id="btn-mic" onclick="toggleSpeechRecognition()" class="p-3 bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-300 rounded-full shadow-sm transition-all flex items-center justify-center" title="음성으로 답변하기">
+                                <i data-lucide="mic" class="w-5 h-5" id="mic-icon"></i>
+                            </button>
+                        </div>
+                    </div>
 
                     <div class="flex flex-col sm:flex-row gap-3">
                         <button id="btn-submit" onclick="evaluateAnswer()" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-100 active:scale-95 transition-all">
@@ -167,12 +192,43 @@
                 <div id="display-ideal" class="bg-slate-50 p-6 rounded-2xl text-slate-700 leading-relaxed border border-slate-100 italic"></div>
             </div>
 
-            <div class="flex gap-4">
-                <button id="btn-next" onclick="nextAction()" class="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2">
-                    <i data-lucide="sparkles" class="w-5 h-5"></i>
-                    <span id="btn-next-text">다음 질문 도전</span>
+            <!-- Action Buttons -->
+            <div class="flex flex-col gap-3">
+                <button id="btn-save-question" onclick="saveCurrentQuestion()" class="w-full py-4 bg-white border-2 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 text-slate-700 hover:text-emerald-600 font-bold rounded-2xl transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="bookmark" class="w-5 h-5"></i>
+                    <span>이 질문 저장하기</span>
                 </button>
-                <button onclick="goHome()" class="flex-1 py-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-2xl transition-all">홈으로</button>
+                <div class="flex gap-4">
+                    <button id="btn-next" onclick="nextAction()" class="flex-[2] py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                        <span id="btn-next-text">다음 질문 도전</span>
+                    </button>
+                    <button onclick="goHome()" class="flex-1 py-4 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-2xl transition-all">홈으로</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Saved Questions View -->
+        <section id="view-saved-questions" class="hidden animate-fade-in space-y-6">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i data-lucide="bookmark" class="w-6 h-6 text-emerald-500"></i>
+                        저장된 질문 보관함
+                    </h2>
+                    <button onclick="goHome()" class="p-2 hover:bg-black/5 rounded-full">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <div id="saved-questions-list" class="space-y-4">
+                        <!-- Saved questions injected here -->
+                    </div>
+                    <div id="empty-saved-message" class="hidden text-center py-12 text-slate-500">
+                        <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 text-slate-300"></i>
+                        <p>아직 저장된 질문이 없습니다.</p>
+                    </div>
+                </div>
             </div>
         </section>
     </div>
@@ -207,8 +263,15 @@
             // Follow-up State
             isFollowUpMode: false,
             followUpDepth: 0,
-            nextFollowUpQuestion: ""
+            nextFollowUpQuestion: "",
+            // Saved Questions State
+            savedQuestions: [],
+            // Hint & Mic State
+            currentHint: null,
+            isRecording: false
         };
+
+        let recognition = null;
 
         function toggleFollowUp(e) {
             state.isFollowUpMode = e.target.checked;
@@ -327,6 +390,7 @@
                 return;
             }
 
+            resetInterviewUI();
             const currentQ = state.relayQuestions[state.relayIndex];
             state.currentQuestion = currentQ;
             
@@ -334,6 +398,7 @@
             document.getElementById('question-tag').innerText = "Document Question";
             document.getElementById('display-question').innerText = currentQ;
             document.getElementById('answer-input').value = "";
+            document.getElementById('btn-toggle-hint').classList.remove('hidden');
             
             const counter = document.getElementById('relay-counter');
             counter.classList.remove('hidden');
@@ -345,6 +410,7 @@
         function nextAction() {
             if (state.isFollowUpMode && state.nextFollowUpQuestion) {
                 state.followUpDepth++;
+                resetInterviewUI();
                 state.currentQuestion = state.nextFollowUpQuestion;
                 state.nextFollowUpQuestion = ""; // 질문 소진
                 
@@ -353,6 +419,7 @@
                 document.getElementById('display-question').innerText = state.currentQuestion;
                 document.getElementById('answer-input').value = "";
                 document.getElementById('btn-regen').classList.add('hidden'); // 꼬리 질문은 다른 질문 받기 숨김
+                document.getElementById('btn-toggle-hint').classList.remove('hidden');
                 window.scrollTo(0, 0);
             } else if (state.isRelayMode) {
                 state.relayIndex++;
@@ -377,6 +444,9 @@
             state.nextFollowUpQuestion = "";
             state.selectedCategory = category;
             
+            resetInterviewUI();
+            document.getElementById('btn-toggle-hint').classList.add('hidden'); // 로딩 중 힌트 버튼 숨김
+
             showView('interview');
             updateInterviewHeader(category);
             document.getElementById('relay-counter').classList.add('hidden');
@@ -401,6 +471,7 @@
                 // 마크다운 잔재 제거
                 state.currentQuestion = question.trim().replace(/\*\*([^*]+)\*\*/g, '$1');
                 document.getElementById('display-question').innerText = state.currentQuestion;
+                document.getElementById('btn-toggle-hint').classList.remove('hidden'); // 질문 로드 후 힌트 버튼 표시
             } catch (err) {
                 showError("질문 생성 실패");
                 goHome();
@@ -413,6 +484,8 @@
         async function evaluateAnswer() {
             const answer = document.getElementById('answer-input').value.trim();
             if (!answer || state.isProcessing) return;
+
+            if(state.isRecording) stopRecording();
 
             state.isProcessing = true;
             setLoadingState(true);
@@ -502,10 +575,12 @@
         }
 
         function showView(viewId) {
-            ['view-home', 'view-interview', 'view-result'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
+            ['view-home', 'view-interview', 'view-result', 'view-saved-questions'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.classList.add('hidden');
             });
-            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            const target = document.getElementById(`view-${viewId}`);
+            if(target) target.classList.remove('hidden');
         }
 
         function updateInterviewHeader(cat) {
@@ -566,6 +641,7 @@
         }
 
         function goHome() {
+            if(state.isRecording) stopRecording();
             showView('home');
             state.selectedCategory = null;
             state.currentQuestion = "";
@@ -583,10 +659,329 @@
             }
         }
 
+        // --- Saved Questions Logic ---
+
+        function loadSavedQuestions() {
+            const saved = localStorage.getItem('interviewSavedQuestions');
+            if (saved) {
+                try {
+                    state.savedQuestions = JSON.parse(saved);
+                } catch(e) {
+                    state.savedQuestions = [];
+                }
+            }
+            updateSavedCount();
+        }
+
+        function updateSavedCount() {
+            document.getElementById('saved-count').innerText = state.savedQuestions.length;
+        }
+
+        function saveCurrentQuestion() {
+            if (!state.currentQuestion) return;
+            
+            const exists = state.savedQuestions.some(q => q.text === state.currentQuestion);
+            const btn = document.getElementById('btn-save-question');
+            
+            if (exists) {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<i data-lucide="info" class="w-5 h-5 text-amber-500"></i><span class="text-amber-600">이미 저장된 질문입니다</span>`;
+                btn.classList.add('border-amber-300', 'bg-amber-50');
+                lucide.createIcons();
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('border-amber-300', 'bg-amber-50');
+                    lucide.createIcons();
+                }, 2000);
+                return;
+            }
+
+            const qObj = {
+                id: Date.now().toString(),
+                category: state.selectedCategory ? state.selectedCategory.name : 'Unknown',
+                difficulty: state.selectedDifficulty ? state.selectedDifficulty.name : '-',
+                text: state.currentQuestion,
+                timestamp: new Date().toISOString()
+            };
+
+            state.savedQuestions.push(qObj);
+            localStorage.setItem('interviewSavedQuestions', JSON.stringify(state.savedQuestions));
+            updateSavedCount();
+            
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="check" class="w-5 h-5 text-emerald-500"></i><span class="text-emerald-600">저장 완료!</span>`;
+            btn.classList.add('border-emerald-500', 'bg-emerald-50');
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.classList.remove('border-emerald-500', 'bg-emerald-50');
+                lucide.createIcons();
+            }, 2000);
+        }
+
+        function showSavedQuestions() {
+            showView('saved-questions');
+            renderSavedQuestions();
+            window.scrollTo(0, 0);
+        }
+
+        function renderSavedQuestions() {
+            const listContainer = document.getElementById('saved-questions-list');
+            const emptyMsg = document.getElementById('empty-saved-message');
+            
+            listContainer.innerHTML = '';
+            
+            if (state.savedQuestions.length === 0) {
+                listContainer.classList.add('hidden');
+                emptyMsg.classList.remove('hidden');
+            } else {
+                listContainer.classList.remove('hidden');
+                emptyMsg.classList.add('hidden');
+                
+                // 최신순 정렬
+                const sorted = [...state.savedQuestions].sort((a, b) => b.id - a.id);
+                
+                sorted.forEach(q => {
+                    const item = document.createElement('div');
+                    item.className = 'p-4 rounded-xl border border-slate-200 bg-white hover:border-emerald-300 transition-colors flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center';
+                    
+                    item.innerHTML = `
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-xs font-bold px-2 py-1 bg-slate-100 text-slate-600 rounded-md">${q.category}</span>
+                                <span class="text-xs font-bold px-2 py-1 bg-slate-100 text-slate-600 rounded-md">${q.difficulty}</span>
+                            </div>
+                            <p class="text-slate-800 font-medium break-keep">${q.text}</p>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                            <button onclick="retrySavedQuestion('${q.id}')" class="flex-1 sm:flex-none px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-1">
+                                <i data-lucide="play" class="w-4 h-4"></i> 연습
+                            </button>
+                            <button onclick="deleteSavedQuestion('${q.id}')" class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg text-sm font-bold transition-colors flex items-center justify-center">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function deleteSavedQuestion(id) {
+            state.savedQuestions = state.savedQuestions.filter(q => q.id !== id);
+            localStorage.setItem('interviewSavedQuestions', JSON.stringify(state.savedQuestions));
+            updateSavedCount();
+            renderSavedQuestions();
+        }
+
+        function retrySavedQuestion(id) {
+            const q = state.savedQuestions.find(x => x.id === id);
+            if (!q) return;
+
+            resetInterviewUI();
+            state.selectedCategory = categories.find(c => c.name === q.category) || { name: q.category, icon: 'bookmark', color: 'bg-emerald-100 text-emerald-600' };
+            state.selectedDifficulty = difficulties.find(d => d.name === q.difficulty) || { name: q.difficulty, prompt: '' };
+            state.currentQuestion = q.text;
+            
+            state.isRelayMode = false;
+            state.followUpDepth = 0;
+            state.nextFollowUpQuestion = "";
+
+            showView('interview');
+            updateInterviewHeader(state.selectedCategory);
+            document.getElementById('relay-counter').classList.add('hidden');
+            document.getElementById('question-tag').innerText = `Saved Question (${q.difficulty})`;
+            document.getElementById('display-question').innerText = state.currentQuestion;
+            document.getElementById('answer-input').value = "";
+            document.getElementById('btn-regen').classList.add('hidden');
+            document.getElementById('btn-next-text').innerText = "다른 질문 도전";
+            document.getElementById('btn-toggle-hint').classList.remove('hidden');
+            
+            window.scrollTo(0, 0);
+        }
+
+        // --- Hint & Mic Logic ---
+
+        function resetInterviewUI() {
+            state.currentHint = null;
+            const hintContainer = document.getElementById('hint-container');
+            const hintBtn = document.getElementById('btn-toggle-hint');
+            
+            hintContainer.classList.add('hidden');
+            hintContainer.innerHTML = '';
+            hintBtn.classList.add('hidden');
+            hintBtn.innerHTML = `<i data-lucide="lightbulb" class="w-4 h-4"></i><span id="hint-btn-text">힌트 키워드 보기</span>`;
+            
+            if (state.isRecording) {
+                stopRecording();
+            }
+        }
+
+        async function toggleHint() {
+            const container = document.getElementById('hint-container');
+            const btn = document.getElementById('btn-toggle-hint');
+            
+            // 이미 힌트가 생성되어 있는 경우 (토글)
+            if (state.currentHint) {
+                if (container.classList.contains('hidden')) {
+                    container.classList.remove('hidden');
+                    btn.innerHTML = `<i data-lucide="lightbulb-off" class="w-4 h-4"></i><span id="hint-btn-text">힌트 숨기기</span>`;
+                } else {
+                    container.classList.add('hidden');
+                    btn.innerHTML = `<i data-lucide="lightbulb" class="w-4 h-4"></i><span id="hint-btn-text">힌트 키워드 보기</span>`;
+                }
+                lucide.createIcons();
+                return;
+            }
+            
+            // 힌트가 없는 경우 생성 (AI 호출)
+            if (state.isProcessing || !state.currentQuestion) return;
+            
+            btn.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4 animate-spin"></i><span id="hint-btn-text">힌트 생성 중...</span>`;
+            btn.disabled = true;
+            lucide.createIcons();
+
+            const systemPrompt = `You are a helpful technical interviewer. 
+            Extract 3 to 5 core keyword nouns that are absolutely essential to answer the provided technical interview question in Korean.
+            Return the result ONLY as a JSON array of strings.
+            Example: ["키워드1", "키워드2", "키워드3"]`;
+            
+            try {
+                const rawResponse = await fetchAI(state.currentQuestion, systemPrompt, "application/json");
+                const cleaned = rawResponse.replace(/```json/g, "").replace(/```/g, "").trim();
+                const keywords = JSON.parse(cleaned);
+                
+                if (Array.isArray(keywords)) {
+                    state.currentHint = keywords;
+                    
+                    container.innerHTML = keywords.map(kw => 
+                        `<span class="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold rounded-lg shadow-sm">${kw}</span>`
+                    ).join('');
+                    
+                    container.classList.remove('hidden');
+                    btn.innerHTML = `<i data-lucide="lightbulb-off" class="w-4 h-4"></i><span id="hint-btn-text">힌트 숨기기</span>`;
+                } else {
+                    throw new Error("Invalid format");
+                }
+            } catch (err) {
+                showError("힌트를 생성하지 못했습니다.");
+                btn.innerHTML = `<i data-lucide="lightbulb" class="w-4 h-4"></i><span id="hint-btn-text">힌트 키워드 보기</span>`;
+            } finally {
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
+
+        function initSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                return false;
+            }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'ko-KR';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            
+            let currentContent = '';
+
+            recognition.onstart = function() {
+                state.isRecording = true;
+                currentContent = document.getElementById('answer-input').value;
+                if (currentContent && !currentContent.endsWith(' ') && !currentContent.endsWith('\n')) {
+                    currentContent += ' ';
+                }
+                
+                const micIcon = document.getElementById('mic-icon');
+                micIcon.setAttribute('data-lucide', 'square');
+                micIcon.classList.add('text-red-600', 'fill-current');
+                
+                document.getElementById('btn-mic').classList.add('border-red-300', 'bg-red-50', 'ring-2', 'ring-red-200');
+                document.getElementById('mic-status').classList.remove('hidden');
+                lucide.createIcons();
+            };
+
+            recognition.onresult = function(event) {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                
+                if (finalTranscript) {
+                    currentContent += finalTranscript + ' ';
+                }
+                
+                document.getElementById('answer-input').value = currentContent + interimTranscript;
+            };
+
+            recognition.onerror = function(event) {
+                console.error("Speech recognition error", event.error);
+                if(event.error === 'not-allowed') {
+                    showError("마이크 권한이 거부되었습니다.");
+                    stopRecording();
+                }
+            };
+
+            recognition.onend = function() {
+                if(state.isRecording) {
+                   try { recognition.start(); } catch(e){}
+                } else {
+                   stopRecordingUI();
+                }
+            };
+            return true;
+        }
+
+        function toggleSpeechRecognition() {
+            if (!recognition && !initSpeechRecognition()) {
+                showError("이 브라우저에서는 음성 인식을 지원하지 않습니다.");
+                return;
+            }
+
+            if (state.isRecording) {
+                stopRecording();
+            } else {
+                try {
+                    recognition.start();
+                } catch(e) {
+                    console.log("Recognition already started");
+                }
+            }
+        }
+
+        function stopRecording() {
+            state.isRecording = false;
+            if (recognition) {
+                try { recognition.stop(); } catch(e){}
+            }
+            stopRecordingUI();
+        }
+
+        function stopRecordingUI() {
+            const micIcon = document.getElementById('mic-icon');
+            if(micIcon) {
+                micIcon.setAttribute('data-lucide', 'mic');
+                micIcon.classList.remove('text-red-600', 'fill-current');
+            }
+            const btnMic = document.getElementById('btn-mic');
+            if(btnMic) btnMic.classList.remove('border-red-300', 'bg-red-50', 'ring-2', 'ring-red-200');
+            const micStatus = document.getElementById('mic-status');
+            if(micStatus) micStatus.classList.add('hidden');
+            lucide.createIcons();
+        }
+
         window.onload = () => {
             state.selectedDifficulty = difficulties[0]; // 기본 난이도: 신입
             initDifficulties();
             initCategories();
+            loadSavedQuestions();
         };
     </script>
 </body>
